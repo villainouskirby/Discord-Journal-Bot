@@ -199,11 +199,11 @@ async def get_fine_members(date: str, thread: discord.Thread):
     return text
 
 ## 벌금 이력 작성
-async def settlefine(interaction: discord.Interaction, thread: discord.Thread):
+async def settlefine(thread: discord.Thread):
     if thread == None:
         return False
     
-    if not await check_forum_channel_valid(interaction, thread.parent_id): return
+    if thread.parent_id != forum_channel_id: return False
     
     fine_channel = None
     
@@ -269,7 +269,7 @@ async def createpost(interaction: discord.Interaction):
 @tree.command(name="createfine", description="벌금이력 생성")
 @app_commands.checks.has_permissions(administrator=True)
 async def createfine(interaction: discord.Interaction):
-    success = await settlefine(interaction, interaction.channel)
+    success = await settlefine(interaction.channel)
     
     if success:
         await interaction.response.send_message(
@@ -392,6 +392,7 @@ async def on_ready():
     await tree.sync()
     
     client.loop.create_task(start_web_server())
+    client.loop.create_task(ping_self())
     client.loop.create_task(daily_check_loop())
 
 client.run(os.environ['TOKEN'])
