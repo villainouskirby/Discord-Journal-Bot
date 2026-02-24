@@ -83,10 +83,11 @@ async def ping_self():
     while not client.is_closed():
         try:
             async with aiohttp.ClientSession() as s:
-                await s.get(os.environ['KOYEB_URL'])
+                async with s.get(os.environ['KOYEB_URL']) as r:
+                    print("Ping:", r.status)
                 
-        except:
-            pass
+        except Exception as e:
+            print("Ping error:", e)
         
         await asyncio.sleep(180)
 
