@@ -1,6 +1,5 @@
 import discord
 from discord import app_commands
-from discord.ext import tasks
 from datetime import datetime
 import asyncio
 
@@ -12,8 +11,13 @@ intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-forum_channel_id = int(os.environ['FORUM'])
-fine_channel_id = int(os.environ['FINE'])
+try:
+    forum_channel_id = int(os.environ['FORUM'])
+    fine_channel_id = int(os.environ['FINE'])
+
+except:
+    forum_channel_id = 0
+    fine_channel_id = 0
 
 ##########
 # 클래스
