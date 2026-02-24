@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import asyncio
 
 import os
@@ -31,7 +31,7 @@ class CheckView(discord.ui.View):
     async def done(self, interaction, button):
         thread = interaction.channel
         post_date = thread.name
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = now_kst().strftime("%Y-%m-%d")
 
         if post_date != today:
             await interaction.response.send_message(
@@ -62,6 +62,9 @@ class CheckView(discord.ui.View):
 ##########
 
 # 호스팅 메서드
+
+def now_kst():
+    return datetime.now(timezone.utc) + timedelta(hours=9)
 
 async def health_check(request):
     return web.Response(text="OK", status=200)
@@ -251,7 +254,7 @@ async def setfine(interaction: discord.Interaction, channel: discord.TextChannel
 @tree.command(name="createpost", description="오늘 작업일지 포스트 생성")
 @app_commands.checks.has_permissions(administrator=True)
 async def createpost(interaction: discord.Interaction):
-    today = datetime.now()
+    today = now_kst()
     success = await create_daily_post(today)
 
     if success:
@@ -372,7 +375,7 @@ async def modifyfine(interaction: discord.Integration, messageid: str):
 ## 00시 초기화 루프
 async def daily_check_loop():
     while True:
-        time = datetime.now()
+        time = now_kst()
         date_str = time.strftime("%Y-%m-%d")
         last_created_post = await get_latest_post()
         last_created_date = last_created_post.name if last_created_post else None
