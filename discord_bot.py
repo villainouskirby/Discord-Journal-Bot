@@ -80,7 +80,7 @@ async def ping_self():
     while not client.is_closed():
         try:
             async with aiohttp.ClientSession() as s:
-                await s.get(os.environ['KOYEP_URL'])
+                await s.get(os.environ['KOYEB_URL'])
                 
         except:
             pass
@@ -389,6 +389,7 @@ async def on_ready():
     client.add_view(CheckView())
     await tree.sync()
     
+    client.loop.create_task(start_web_server())
     client.loop.create_task(daily_check_loop())
 
 client.run(os.environ['TOKEN'])
