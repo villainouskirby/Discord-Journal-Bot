@@ -29,6 +29,8 @@ class CheckView(discord.ui.View):
 
     @discord.ui.button(label="완료 / 취소", style=discord.ButtonStyle.green, custom_id="done_button")
     async def done(self, interaction, button):
+        await interaction.response.defer(ephemeral=True)
+        
         thread = interaction.channel
         post_date = thread.name
         today = now_kst().strftime("%Y-%m-%d")
@@ -51,9 +53,7 @@ class CheckView(discord.ui.View):
         else:
             users.append(uid)
 
-        await update_post(thread, users)
-        
-        await interaction.response.defer(ephemeral=True)
+        await update_post(msg, users)      
 
 
 
@@ -164,7 +164,7 @@ async def create_daily_post(date: datetime):
         return False
 
 ## 포스트 업데이트
-async def update_post(thread, users):
+async def update_post(msg, users):
     text = "완료자:\n\n"
     
     if len(users) == 0:
@@ -175,7 +175,7 @@ async def update_post(thread, users):
             text += user + "\n"
     
     text += "\u200b"
-    msg = await thread.fetch_message(thread.id)
+    
     await msg.edit(content=text)
 
 ## 벌금 명단 생성
@@ -315,7 +315,7 @@ async def modifylist(interaction: discord.Interaction, member: discord.Member, v
         if value == True:
             users.append(user)
 
-    await update_post(thread, users)
+    await update_post(msg, users)
         
     await interaction.response.send_message(
         "명단 수정 완료",
@@ -375,15 +375,17 @@ async def modifyfine(interaction: discord.Integration, messageid: str):
 
 ## 00시 초기화 루프
 async def daily_check_loop():
+    last_created_post = await get_latest_post()
+    last_created_date = last_created_post.name if last_created_post else None
+        
     while True:
         time = now_kst()
         date_str = time.strftime("%Y-%m-%d")
-        last_created_post = await get_latest_post()
-        last_created_date = last_created_post.name if last_created_post else None
 
         if last_created_date != date_str and time.hour == 0:
             await settlefine(last_created_post)
             await create_daily_post(time)
+            last_created_date = date_str
         
         await asyncio.sleep(60)
         
