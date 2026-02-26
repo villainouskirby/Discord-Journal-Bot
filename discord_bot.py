@@ -122,10 +122,10 @@ async def get_latest_post():
     
     threads = forum.threads
     
-    if len(threads) == 0:
+    if not threads:
         return None
     
-    return threads[-1]
+    return max(threads, key=lambda t: t.name)
 
 ## 포럼 채널 검사
 async def check_forum_channel_valid(interaction: discord.Interaction, channel_id: int):
