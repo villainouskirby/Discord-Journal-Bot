@@ -18,6 +18,8 @@ try:
 except:
     forum_channel_id = 0
     fine_channel_id = 0
+    
+last_created_post = None
 
 ##########
 # 클래스
@@ -141,6 +143,8 @@ async def check_forum_channel_valid(interaction: discord.Interaction, channel_id
 
 ## 새 포스트 생성
 async def create_daily_post(date: datetime):
+    global last_created_post
+    
     forum = client.get_channel(forum_channel_id)
 
     if not isinstance(forum, discord.ForumChannel):
@@ -150,11 +154,13 @@ async def create_daily_post(date: datetime):
     date_str = date.strftime("%Y-%m-%d")
 
     try:
-        await forum.create_thread(
+        created_post = await forum.create_thread(
             name=date_str,
             content="완료자:\n\n없음\n\u200b",
             view=CheckView()
         )
+        
+        last_created_post = created_post.thread
 
         print(f"{date_str} 포스트 생성 완료")
         return True
@@ -375,6 +381,8 @@ async def modifyfine(interaction: discord.Integration, messageid: str):
 
 ## 00시 초기화 루프
 async def daily_check_loop():
+    global last_created_post
+    
     last_created_post = await get_latest_post()
     last_created_date = last_created_post.name if last_created_post else None
         
