@@ -174,7 +174,9 @@ async def create_daily_post(date: datetime):
         return False
 
 ## 포스트 업데이트
-async def update_post(msg, users):
+async def update_post(msg: discord.Message, users):
+    global  recent_msg
+    
     text = "완료자:\n\n"
     
     if len(users) == 0:
@@ -186,7 +188,7 @@ async def update_post(msg, users):
     
     text += "\u200b"
     
-    await msg.edit(content=text)
+    recent_msg = await msg.edit(content=text)
 
 ## 벌금 명단 생성
 async def get_fine_members(date: str, msg: discord.Message):
@@ -352,7 +354,7 @@ async def modifyfine(interaction: discord.Interaction, messageid: str):
         
         return
 
-    post_msg = await forum_channel.fetch_message(thread.id)
+    post_msg = await thread.fetch_message(thread.id)
     text = await get_fine_members(thread.name, post_msg)
     await msg.edit(content=text)
     
