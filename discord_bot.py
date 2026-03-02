@@ -18,8 +18,11 @@ try:
 except:
     forum_channel_id = 0
     fine_channel_id = 0
-    
+
+forum_channel = None
+fine_channel = None
 last_created_post = None
+recent_msg = None
 
 ##########
 # 클래스
@@ -38,14 +41,18 @@ class CheckView(discord.ui.View):
         today = now_kst().strftime("%Y-%m-%d")
 
         if post_date != today:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "마감된 날짜입니다",
                 ephemeral=True
             )
 
             return
 
-        msg = await thread.fetch_message(thread.id)
+        if thread == last_created_post:
+            msg =  recent_msg
+        else:
+            msg = await thread.fetch_message(thread.id)
+            
         users = parse_users(msg.content)
         uid = str(interaction.user.mention)
 
@@ -55,7 +62,7 @@ class CheckView(discord.ui.View):
         else:
             users.append(uid)
 
-        await update_post(msg, users)      
+        await update_post(msg, users)
 
 
 
@@ -143,24 +150,21 @@ async def check_forum_channel_valid(interaction: discord.Interaction, channel_id
 
 ## 새 포스트 생성
 async def create_daily_post(date: datetime):
-    global last_created_post
-    
-    forum = client.get_channel(forum_channel_id)
+    global last_created_post, recent_msg
 
-    if not isinstance(forum, discord.ForumChannel):
-        print("ID Error! This is not Forum Channel.")
-        return False
+    if forum_channel == None: return False
 
     date_str = date.strftime("%Y-%m-%d")
 
     try:
-        created_post = await forum.create_thread(
+        created_post = await forum_channel.create_thread(
             name=date_str,
             content="완료자:\n\n없음\n\u200b",
             view=CheckView()
         )
         
         last_created_post = created_post.thread
+        recent_msg = created_post.message
 
         print(f"{date_str} 포스트 생성 완료")
         return True
@@ -185,8 +189,7 @@ async def update_post(msg, users):
     await msg.edit(content=text)
 
 ## 벌금 명단 생성
-async def get_fine_members(date: str, thread: discord.Thread):
-    msg = await thread.fetch_message(thread.id)
+async def get_fine_members(date: str, msg: discord.Message):
     completed_members = parse_users(msg.content)
     fine_users = []
     
@@ -210,22 +213,14 @@ async def get_fine_members(date: str, thread: discord.Thread):
 
 ## 벌금 이력 작성
 async def settlefine(thread: discord.Thread):
-    if thread == None:
-        return False
+    if forum_channel == None or fine_channel == None: return False
     
-    if thread.parent_id != forum_channel_id: return False
+    if thread == last_created_post:
+        msg = recent_msg
+    else:
+        msg = await forum_channel.fetch_message(thread.id)
     
-    fine_channel = None
-    
-    try:
-        fine_channel = await client.fetch_channel(fine_channel_id)
-        
-    finally:
-        if fine_channel == None or not isinstance(fine_channel, discord.TextChannel):
-            print("ID Error! This is not Text Channel.")
-            return False
-
-    text = await get_fine_members(thread.name, thread)
+    text = await get_fine_members(thread.name, msg)
     
     await fine_channel.send(text)
     
@@ -235,10 +230,11 @@ async def settlefine(thread: discord.Thread):
 @tree.command(name="setforum", description="포럼 채널 설정")
 @app_commands.checks.has_permissions(administrator=True)
 async def setforum(interaction: discord.Interaction, channel: discord.ForumChannel):
-    global forum_channel_id
-    
-    forum_channel_id = channel.id
+    global forum_channel, forum_channel_id
 
+    forum_channel = channel
+    forum_channel_id = channel.id
+    
     await interaction.response.send_message(
         f"포럼 채널 설정 완료: {channel.mention}",
         ephemeral=True
@@ -248,8 +244,9 @@ async def setforum(interaction: discord.Interaction, channel: discord.ForumChann
 @tree.command(name="setfine", description="벌금이력 채널 설정")
 @app_commands.checks.has_permissions(administrator=True)
 async def setfine(interaction: discord.Interaction, channel: discord.TextChannel):
-    global fine_channel_id
+    global fine_channel, fine_channel_id
     
+    fine_channel = channel
     fine_channel_id = channel.id
 
     await interaction.response.send_message(
@@ -297,14 +294,6 @@ async def createfine(interaction: discord.Interaction):
 @tree.command(name="modifylist", description="완료자 명단 수정")
 @app_commands.checks.has_permissions(administrator=True)
 async def modifylist(interaction: discord.Interaction, member: discord.Member, value: bool):
-    if not isinstance(interaction.channel, discord.Thread):
-        await interaction.response.send_message(
-            "포럼 채널의 포스트가 아닙니다.",
-            ephemeral=True
-        )
-        
-        return
-    
     thread = interaction.channel
 
     if not await check_forum_channel_valid(interaction, thread.parent_id): return
@@ -331,10 +320,10 @@ async def modifylist(interaction: discord.Interaction, member: discord.Member, v
 ## 벌금이력 수정(관리자 명령어)
 @tree.command(name="modifyfine", description="벌금이력 수정")
 @app_commands.checks.has_permissions(administrator=True)
-async def modifyfine(interaction: discord.Integration, messageid: str):
-    if not isinstance(interaction.channel, discord.Thread):
+async def modifyfine(interaction: discord.Interaction, messageid: str):
+    if forum_channel == None or fine_channel == None:
         await interaction.response.send_message(
-            "포럼 채널의 포스트가 아닙니다.",
+            "채널 없음.",
             ephemeral=True
         )
         
@@ -344,14 +333,6 @@ async def modifyfine(interaction: discord.Integration, messageid: str):
 
     if not await check_forum_channel_valid(interaction, thread.parent_id): return
 
-    fine_channel = client.get_channel(fine_channel_id)
-    
-    if not isinstance(fine_channel, discord.TextChannel):
-        await interaction.response.send_message(
-            "벌금 채널을 찾을 수 없습니다.",
-            ephemeral=True
-        )
-    
     try:
         msg = await fine_channel.fetch_message(int(messageid))
         
@@ -371,7 +352,8 @@ async def modifyfine(interaction: discord.Integration, messageid: str):
         
         return
 
-    text = await get_fine_members(thread.name, thread)
+    post_msg = await forum_channel.fetch_message(thread.id)
+    text = await get_fine_members(thread.name, post_msg)
     await msg.edit(content=text)
     
     await interaction.response.send_message(
@@ -381,9 +363,6 @@ async def modifyfine(interaction: discord.Integration, messageid: str):
 
 ## 00시 초기화 루프
 async def daily_check_loop():
-    global last_created_post
-    
-    last_created_post = await get_latest_post()
     last_created_date = last_created_post.name if last_created_post else None
         
     while True:
@@ -400,7 +379,26 @@ async def daily_check_loop():
 # 봇 로그인
 @client.event
 async def on_ready():
+    global forum_channel, fine_channel, last_created_post, recent_msg
+    
     print(f"Logged in as {client.user.name}")
+    
+    try:
+        forum_channel = await client.fetch_channel(forum_channel_id)
+        fine_channel = await client.fetch_channel(fine_channel_id)
+        
+    finally:
+        if forum_channel == None or not isinstance(forum_channel, discord.ForumChannel):
+            print("ID Error! This is not Forum Channel.")
+            return None
+        
+        if fine_channel == None or not isinstance(fine_channel, discord.TextChannel):
+            print("ID Error! This is not Text Channel.")
+            return None
+        
+    last_created_post = await get_latest_post()
+    if last_created_post != None:
+        recent_msg = await last_created_post.fetch_message(last_created_post.id)
     
     client.add_view(CheckView())
     await tree.sync()
