@@ -62,7 +62,7 @@ class CheckView(discord.ui.View):
         else:
             users.append(uid)
 
-        await update_post(msg, users)
+        await update_post(msg, users, True)
 
 
 
@@ -174,7 +174,7 @@ async def create_daily_post(date: datetime):
         return False
 
 ## 포스트 업데이트
-async def update_post(msg: discord.Message, users):
+async def update_post(msg: discord.Message, users, today):
     global  recent_msg
     
     text = "완료자:\n\n"
@@ -188,7 +188,10 @@ async def update_post(msg: discord.Message, users):
     
     text += "\u200b"
     
-    recent_msg = await msg.edit(content=text)
+    res = await msg.edit(content=text)
+    
+    if today:
+        recent_msg = res
 
 ## 벌금 명단 생성
 async def get_fine_members(date: str, msg: discord.Message):
@@ -312,7 +315,7 @@ async def modifylist(interaction: discord.Interaction, member: discord.Member, v
         if value == True:
             users.append(user)
 
-    await update_post(msg, users)
+    await update_post(msg, users, thread.name == last_created_post.name)
         
     await interaction.response.send_message(
         "명단 수정 완료",
