@@ -242,7 +242,7 @@ def get_fine_stat_text(dict: defaultdict):
     return txt
 
 ## 벌금 현황 업데이트
-async def update_fine_stat(fine_text: str):
+async def update_fine_stat(fine_text: str, is_add: bool = True):
     global last_created_fine
     
     if last_created_fine == None:
@@ -250,7 +250,7 @@ async def update_fine_stat(fine_text: str):
     
     fine_stat_dict = defaultdict(int)
     
-    for txt in last_created_fine.content.split("\n")[1:]:
+    for txt in last_created_fine.content.split("\n")[2:]:
         mem, _, num = txt.split()
         num = int(num[:-1])
         
@@ -261,8 +261,10 @@ async def update_fine_stat(fine_text: str):
     if "없음" in members[0]:
         return
     
+    val = 1 if is_add else -1
+    
     for mem in members:
-        fine_stat_dict[mem] += 1
+        fine_stat_dict[mem] += val
     
     txt = get_fine_stat_text(fine_stat_dict)
     last_created_fine = await last_created_fine.edit(content=txt)
@@ -392,6 +394,8 @@ async def modifyfine(interaction: discord.Interaction, messageid: str):
         
         return
 
+    await update_fine_stat(msg.content, False)
+    
     post_msg = await thread.fetch_message(thread.id)
     text = await get_fine_members(thread.name, post_msg)
     await msg.edit(content=text)
