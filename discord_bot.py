@@ -256,7 +256,12 @@ async def update_fine_stat(fine_text: str):
         
         fine_stat_dict[mem] = num
     
-    for mem in fine_text.split("\n")[1:]:
+    members = fine_text.split("\n")[1:]
+    
+    if "없음" in members[0]:
+        return
+    
+    for mem in members:
         fine_stat_dict[mem] += 1
     
     txt = get_fine_stat_text(fine_stat_dict)
