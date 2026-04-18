@@ -359,6 +359,24 @@ async def modifylist(interaction: discord.Interaction, member: discord.Member, v
         "명단 수정 완료",
         ephemeral=True
     )
+    
+## 완료자 명단 모든사람 수정(관리자 명령어)
+@tree.command(name="modifylist", description="완료자 명단 모든사람 수정")
+@app_commands.checks.has_permissions(administrator=True)
+async def modifylistall(interaction: discord.Interaction, value: bool):
+    thread = interaction.channel
+
+    if not await check_forum_channel_valid(interaction, thread.parent_id): return
+    
+    msg = await thread.fetch_message(thread.id)
+    users = [m.mention for m in client.guilds[0].members] if value else []
+    
+    await update_post(msg, users, thread.name == last_created_post.name)
+        
+    await interaction.response.send_message(
+        "명단 수정 완료",
+        ephemeral=True
+    )
 
 ## 벌금 이력 수정(관리자 명령어)
 @tree.command(name="modifyfine", description="벌금 이력 수정")
