@@ -361,7 +361,7 @@ async def modifylist(interaction: discord.Interaction, member: discord.Member, v
     )
     
 ## 완료자 명단 모든사람 수정(관리자 명령어)
-@tree.command(name="modifylist", description="완료자 명단 모든사람 수정")
+@tree.command(name="modifylistall", description="완료자 명단 모든사람 수정")
 @app_commands.checks.has_permissions(administrator=True)
 async def modifylistall(interaction: discord.Interaction, value: bool):
     thread = interaction.channel
