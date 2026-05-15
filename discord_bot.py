@@ -418,6 +418,8 @@ async def modifyfine(interaction: discord.Interaction, messageid: str):
     text = await get_fine_members(thread.name, post_msg)
     await msg.edit(content=text)
     
+    await update_fine_stat(text)
+    
     await interaction.response.send_message(
         "벌금이력 수정 완료",
         ephemeral=True
